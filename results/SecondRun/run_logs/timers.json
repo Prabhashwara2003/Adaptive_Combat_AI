@@ -1,0 +1,47 @@
+{
+    "name": "root",
+    "metadata": {
+        "timer_format_version": "0.1.0",
+        "start_time_seconds": "1776248560",
+        "python_version": "3.10.11 (tags/v3.10.11:7d4cc5a, Apr  5 2023, 00:38:17) [MSC v.1929 64 bit (AMD64)]",
+        "command_line_arguments": "C:\\Users\\msi\\mlagents-env\\Scripts\\mlagents-learn ML_Training/Config/combat_config.yaml --run-id=SecondRun --resume",
+        "mlagents_version": "1.1.0",
+        "mlagents_envs_version": "1.1.0",
+        "communication_protocol_version": "1.5.0",
+        "pytorch_version": "2.1.1+cpu",
+        "numpy_version": "1.23.5",
+        "end_time_seconds": "1776248569"
+    },
+    "total": 8.575797299999977,
+    "count": 1,
+    "self": 0.008003399998415262,
+    "children": {
+        "run_training.setup": {
+            "total": 0.11842230000183918,
+            "count": 1,
+            "self": 0.11842230000183918
+        },
+        "TrainerController.start_learning": {
+            "total": 8.449371599999722,
+            "count": 1,
+            "self": 0.00037590001011267304,
+            "children": {
+                "TrainerController._reset_env": {
+                    "total": 8.448984999995446,
+                    "count": 1,
+                    "self": 8.448984999995446
+                },
+                "trainer_threads": {
+                    "total": 1.4999968698248267e-06,
+                    "count": 1,
+                    "self": 1.4999968698248267e-06
+                },
+                "TrainerController._save_models": {
+                    "total": 9.199997293762863e-06,
+                    "count": 1,
+                    "self": 9.199997293762863e-06
+                }
+            }
+        }
+    }
+}

@@ -5,15 +5,15 @@ using System.Collections;
 public class Health : MonoBehaviour
 {
     [Header("Health Settings")]
-    [SerializeField] private float maxHealth = 100f;
-    [SerializeField] private float currentHealth;
+    public float maxHealth = 100f;
+    public float currentHealth;
 
     [Header("UI (Optional for now)")]
-    [SerializeField] private Slider healthBar;
+    public Slider healthBar;
 
     [Header("Visual Feedback")]
-    [SerializeField] private Renderer meshRenderer;
-    [SerializeField] private float flashDuration = 0.1f;
+    public Renderer meshRenderer;
+    public  float flashDuration = 0.1f;
 
     private bool isInvincible = false;
     public float CurrentHealth => currentHealth;
@@ -23,6 +23,8 @@ public class Health : MonoBehaviour
     private Material material;
 
     private Color originalColor;
+
+    private CombatAgent agentComponent;
 
     public void SetInvincible(bool invincible)
     {
@@ -45,6 +47,9 @@ public class Health : MonoBehaviour
             originalColor = material.color;
         }
 
+        // Get CombatAgent component
+        agentComponent = GetComponent<CombatAgent>();
+
         UpdateHealthBar();
     }
 
@@ -56,6 +61,12 @@ public class Health : MonoBehaviour
         currentHealth = Mathf.Max(currentHealth, 0); // Don't go below 0
 
         UpdateHealthBar();
+
+        // Notify agent if it has one
+        if (agentComponent != null)
+        {
+            agentComponent.OnTakeDamage(damage);
+        }
 
         if (meshRenderer != null)
         {
@@ -106,7 +117,19 @@ public class Health : MonoBehaviour
             meshRenderer.material.color = Color.black;
 
         // Optionally destroy after delay
-        Destroy(gameObject, 3f);
+        //Destroy(gameObject, 3f);
 
     }
+    public void ResetHealth()
+    {
+        currentHealth = maxHealth;
+        UpdateHealthBar();
+
+        // Reset visual if dead
+        if (meshRenderer != null)
+        {
+            material.color = originalColor;
+        }
+    }
+
 }

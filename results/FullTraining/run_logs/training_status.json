@@ -1,0 +1,47 @@
+{
+    "CombatAI": {
+        "checkpoints": [
+            {
+                "steps": 499890,
+                "file_path": "results\\FullTraining\\CombatAI\\CombatAI-499890.onnx",
+                "reward": -180.46234580874443,
+                "creation_time": 1776422152.5511296,
+                "auxillary_file_paths": [
+                    "results\\FullTraining\\CombatAI\\CombatAI-499890.pt"
+                ]
+            },
+            {
+                "steps": 554651,
+                "file_path": "results\\FullTraining\\CombatAI\\CombatAI-554651.onnx",
+                "reward": -7.500718823501042,
+                "creation_time": 1776423135.8070545,
+                "auxillary_file_paths": [
+                    "results\\FullTraining\\CombatAI\\CombatAI-554651.pt"
+                ]
+            },
+            {
+                "steps": 556083,
+                "file_path": "results\\FullTraining\\CombatAI\\CombatAI-556083.onnx",
+                "reward": 9.857298964803869,
+                "creation_time": 1776423627.0089662,
+                "auxillary_file_paths": [
+                    "results\\FullTraining\\CombatAI\\CombatAI-556083.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 556083,
+            "file_path": "results\\FullTraining\\CombatAI.onnx",
+            "reward": 9.857298964803869,
+            "creation_time": 1776423627.0089662,
+            "auxillary_file_paths": [
+                "results\\FullTraining\\CombatAI\\CombatAI-556083.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "2.1.1+cpu"
+    }
+}

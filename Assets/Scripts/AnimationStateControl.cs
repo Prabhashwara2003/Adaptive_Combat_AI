@@ -19,4 +19,5 @@ public class AnimationStateControl : MonoBehaviour
             animator.SetBool("IsWalking", false);
         }
     }
+    //whwwdbwh
 }

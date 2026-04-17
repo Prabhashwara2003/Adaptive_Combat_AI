@@ -1,0 +1,47 @@
+{
+    "CombatAI": {
+        "checkpoints": [
+            {
+                "steps": 30186,
+                "file_path": "results\\FourthRun\\CombatAI\\CombatAI-30186.onnx",
+                "reward": -27.355712779543616,
+                "creation_time": 1776401107.2066822,
+                "auxillary_file_paths": [
+                    "results\\FourthRun\\CombatAI\\CombatAI-30186.pt"
+                ]
+            },
+            {
+                "steps": 33543,
+                "file_path": "results\\FourthRun\\CombatAI\\CombatAI-33543.onnx",
+                "reward": 0.7176476120948792,
+                "creation_time": 1776414115.5832071,
+                "auxillary_file_paths": [
+                    "results\\FourthRun\\CombatAI\\CombatAI-33543.pt"
+                ]
+            },
+            {
+                "steps": 83441,
+                "file_path": "results\\FourthRun\\CombatAI\\CombatAI-83441.onnx",
+                "reward": 11.971933537838506,
+                "creation_time": 1776414936.1870792,
+                "auxillary_file_paths": [
+                    "results\\FourthRun\\CombatAI\\CombatAI-83441.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 83441,
+            "file_path": "results\\FourthRun\\CombatAI.onnx",
+            "reward": 11.971933537838506,
+            "creation_time": 1776414936.1870792,
+            "auxillary_file_paths": [
+                "results\\FourthRun\\CombatAI\\CombatAI-83441.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "2.1.1+cpu"
+    }
+}
