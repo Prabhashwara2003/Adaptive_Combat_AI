@@ -1,0 +1,29 @@
+{
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "2.1.1+cpu"
+    },
+    "CombatAI": {
+        "checkpoints": [
+            {
+                "steps": 0,
+                "file_path": "results\\Fifth_run\\CombatAI\\CombatAI-0.onnx",
+                "reward": null,
+                "creation_time": 1776445151.5484538,
+                "auxillary_file_paths": [
+                    "results\\Fifth_run\\CombatAI\\CombatAI-0.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 0,
+            "file_path": "results\\Fifth_run\\CombatAI.onnx",
+            "reward": null,
+            "creation_time": 1776445151.5484538,
+            "auxillary_file_paths": [
+                "results\\Fifth_run\\CombatAI\\CombatAI-0.pt"
+            ]
+        }
+    }
+}

@@ -8,38 +8,35 @@ public class Health : MonoBehaviour
     public float maxHealth = 100f;
     public float currentHealth;
 
-    [Header("UI (Optional for now)")]
+    [Header("UI (Optional)")]
     public Slider healthBar;
 
     [Header("Visual Feedback")]
     public Renderer meshRenderer;
-    public  float flashDuration = 0.1f;
+    public float flashDuration = 0.1f;
 
     private bool isInvincible = false;
+    private Material material;
+    private Color originalColor;
+    private CombatAgent agentComponent;
+
+    // Tracks whether Die() has already been handled this episode
+    // to prevent double EndEpisode() calls
+    private bool isDead = false;
+
     public float CurrentHealth => currentHealth;
     public float MaxHealth => maxHealth;
     public bool IsAlive => currentHealth > 0;
-
-    private Material material;
-
-    private Color originalColor;
-
-    private CombatAgent agentComponent;
 
     public void SetInvincible(bool invincible)
     {
         isInvincible = invincible;
     }
-    IEnumerator DamageFlash()
-    {
-        material.color = Color.red;
-        yield return new WaitForSeconds(flashDuration);
-        material.color = originalColor;
-    }
 
     void Start()
     {
         currentHealth = maxHealth;
+        isDead = false;
 
         if (meshRenderer != null)
         {
@@ -47,42 +44,57 @@ public class Health : MonoBehaviour
             originalColor = material.color;
         }
 
-        // Get CombatAgent component
         agentComponent = GetComponent<CombatAgent>();
-
         UpdateHealthBar();
     }
 
     public void TakeDamage(float damage)
     {
-        if (isInvincible) return;
+        // Don't process damage if already dead or invincible
+        if (isInvincible || isDead) return;
 
         currentHealth -= damage;
-        currentHealth = Mathf.Max(currentHealth, 0); // Don't go below 0
-
+        currentHealth = Mathf.Max(currentHealth, 0f);
         UpdateHealthBar();
-
-        // Notify agent if it has one
-        if (agentComponent != null)
-        {
-            agentComponent.OnTakeDamage(damage);
-        }
 
         if (meshRenderer != null)
         {
             StartCoroutine(DamageFlash());
         }
 
-        if (currentHealth <= 0)
+        if (currentHealth <= 0f)
         {
-            Die();
+            isDead = true;
+
+            // Notify agent FIRST — this calls EndEpisode() internally if agent died.
+            // We pass isDead=true so the agent knows this hit was lethal.
+            if (agentComponent != null)
+            {
+                agentComponent.OnTakeDamage(damage, lethal: true);
+            }
+
+            // Only run Die() (disabling colliders etc.) if this is NOT the agent.
+            // The agent resets itself in OnEpisodeBegin, so Die() would break that.
+            if (agentComponent == null)
+            {
+                Die();
+            }
+        }
+        else
+        {
+            // Non-lethal hit — notify agent for reward shaping
+            if (agentComponent != null)
+            {
+                agentComponent.OnTakeDamage(damage, lethal: false);
+            }
         }
     }
 
     public void Heal(float amount)
     {
+        if (isDead) return;
         currentHealth += amount;
-        currentHealth = Mathf.Min(currentHealth, maxHealth); // Don't exceed max
+        currentHealth = Mathf.Min(currentHealth, maxHealth);
         UpdateHealthBar();
     }
 
@@ -94,42 +106,64 @@ public class Health : MonoBehaviour
         }
     }
 
+    IEnumerator DamageFlash()
+    {
+        if (material != null)
+        {
+            material.color = Color.red;
+            yield return new WaitForSeconds(flashDuration);
+            material.color = originalColor;
+        }
+    }
+
     void Die()
     {
         Debug.Log(gameObject.name + " died!");
 
-        // Disable components
         if (TryGetComponent<Collider>(out Collider col))
             col.enabled = false;
 
         if (TryGetComponent<Rigidbody>(out Rigidbody rb))
             rb.isKinematic = true;
 
-        // Disable AI
         if (TryGetComponent<FSMEnemy>(out FSMEnemy ai))
             ai.enabled = false;
 
         if (TryGetComponent<PlayerController>(out PlayerController pc))
             pc.enabled = false;
 
-        // Visual feedback
         if (meshRenderer != null)
             meshRenderer.material.color = Color.black;
-
-        // Optionally destroy after delay
-        //Destroy(gameObject, 3f);
-
     }
+
     public void ResetHealth()
     {
         currentHealth = maxHealth;
+        isDead = false;
         UpdateHealthBar();
 
-        // Reset visual if dead
+        // Safe null check in case ResetHealth is called before Start()
         if (meshRenderer != null)
         {
-            material.color = originalColor;
+            // Re-fetch material in case it was swapped during Die()
+            material = meshRenderer.material;
+            if (material != null)
+            {
+                material.color = originalColor;
+            }
         }
-    }
 
+        // Re-enable components that Die() disabled
+        if (TryGetComponent<Collider>(out Collider col))
+            col.enabled = true;
+
+        if (TryGetComponent<Rigidbody>(out Rigidbody rb))
+            rb.isKinematic = false;
+
+        if (TryGetComponent<FSMEnemy>(out FSMEnemy ai))
+            ai.enabled = true;
+
+        if (TryGetComponent<PlayerController>(out PlayerController pc))
+            pc.enabled = true;
+    }
 }

@@ -9,6 +9,7 @@ public class PlayerCombat : MonoBehaviour
     [SerializeField] private Transform weaponTip; // Where attack originates
 
     private float lastAttackTime;
+    private Animator animator;
 
     System.Collections.IEnumerator AttackAnimation()
     {
@@ -21,6 +22,11 @@ public class PlayerCombat : MonoBehaviour
 
         // Return to normal
         weapon.localScale = originalScale;
+    }
+
+    void Start()
+    {
+        animator = GetComponent<Animator>();
     }
 
     void Update()
@@ -46,6 +52,7 @@ public class PlayerCombat : MonoBehaviour
 
         lastAttackTime = Time.time;
         PerformAttack();
+       
     }
 
     void PerformAttack()
@@ -56,8 +63,9 @@ public class PlayerCombat : MonoBehaviour
         }
 
         Debug.Log("Player attacked!");
+        animator.SetTrigger("Attack");
 
-        
+
 
         // Find enemies in range
         Collider[] hitColliders = Physics.OverlapSphere(weaponTip.position, attackRange);

@@ -14,45 +14,60 @@ public class TrainingPlayer : MonoBehaviour
     [SerializeField] private float attackDamage = 15f;
     [SerializeField] private float attackCooldown = 2f;
 
-    private Transform agent;
+    [Header("References")]
+    [SerializeField] private Transform agent;
+
+    // agentHealth is fetched automatically from the agent Transform — no need to assign in Inspector
+    private Health agentHealth;
     private Health health;
+    private Rigidbody rb;
+
     private float lastAttackTime;
     private Vector3 wanderTarget;
+    private Vector3 startPosition;
 
     public enum DummyMode
     {
-        Stationary,      // Doesn't move
-        Wander,          // Moves randomly
-        ChaseAgent,      // Follows agent
-        FightBack        // Attacks agent
+        Stationary,  // Stands still
+        Wander,      // Moves randomly
+        ChaseAgent,  // Follows agent
+        FightBack    // Chases and attacks agent
     }
 
     void Start()
     {
         health = GetComponent<Health>();
-        agent = GameObject.FindGameObjectWithTag("Agent")?.transform;
+        rb = GetComponent<Rigidbody>();
+        startPosition = transform.position;
         wanderTarget = transform.position;
-    }
 
+        // Auto-fetch agent health so it never goes stale
+        if (agent != null)
+        {
+            agentHealth = agent.GetComponent<Health>();
+        }
+    }
 
     void Update()
     {
-        if (!health.IsAlive || agent == null) return;
+        if (health == null || !health.IsAlive || agent == null) return;
+
+        // Refresh agentHealth reference in case agent was reset
+        if (agentHealth == null)
+        {
+            agentHealth = agent.GetComponent<Health>();
+        }
 
         switch (mode)
         {
             case DummyMode.Stationary:
-                // Do nothing
                 break;
-
             case DummyMode.Wander:
                 Wander();
                 break;
-
             case DummyMode.ChaseAgent:
                 ChaseAgent();
                 break;
-
             case DummyMode.FightBack:
                 FightBack();
                 break;
@@ -61,43 +76,38 @@ public class TrainingPlayer : MonoBehaviour
 
     void Wander()
     {
-        // Move to random positions
         if (Vector3.Distance(transform.position, wanderTarget) < 1f)
         {
-            // Pick new target
-            wanderTarget = transform.position + new Vector3(
+            // Pick a new wander target clamped to wander radius around start position
+            // so the dummy doesn't drift off the map
+            Vector3 offset = new Vector3(
                 Random.Range(-wanderRadius, wanderRadius),
-                0,
+                0f,
                 Random.Range(-wanderRadius, wanderRadius)
             );
+            wanderTarget = startPosition + offset;
         }
 
-        Vector3 direction = (wanderTarget - transform.position).normalized;
-        transform.position += direction * moveSpeed * Time.deltaTime;
+        MoveTowards(wanderTarget);
     }
 
     void ChaseAgent()
     {
-        Vector3 direction = (agent.position - transform.position).normalized;
-        transform.position += direction * moveSpeed * Time.deltaTime;
-
-        // Face agent
-        transform.LookAt(new Vector3(agent.position.x, transform.position.y, agent.position.z));
+        MoveTowards(agent.position);
+        FaceTarget(agent.position);
     }
 
     void FightBack()
     {
         float distance = Vector3.Distance(transform.position, agent.position);
 
-        if (distance > attackRange + 1f)
+        if (distance > attackRange)
         {
-            // Chase if too far
             ChaseAgent();
         }
-        else if (distance <= attackRange)
+        else
         {
-            // In range - attack
-            transform.LookAt(new Vector3(agent.position.x, transform.position.y, agent.position.z));
+            FaceTarget(agent.position);
 
             if (Time.time >= lastAttackTime + attackCooldown)
             {
@@ -107,19 +117,65 @@ public class TrainingPlayer : MonoBehaviour
         }
     }
 
-    void AttackAgent()
+    /// <summary>
+    /// Moves using Rigidbody if available, otherwise falls back to transform.
+    /// Using Rigidbody prevents clipping through colliders.
+    /// </summary>
+    void MoveTowards(Vector3 target)
     {
-        if (agent.TryGetComponent<Health>(out Health agentHealth))
+        Vector3 direction = (target - transform.position).normalized;
+        direction.y = 0f;
+
+        if (rb != null)
         {
-            agentHealth.TakeDamage(attackDamage);
-            Debug.Log("Dummy attacked agent!");
+            rb.MovePosition(rb.position + direction * moveSpeed * Time.fixedDeltaTime);
+        }
+        else
+        {
+            transform.position += direction * moveSpeed * Time.deltaTime;
         }
     }
 
-    // Change mode during training
+    void FaceTarget(Vector3 target)
+    {
+        Vector3 lookTarget = new Vector3(target.x, transform.position.y, target.z);
+        transform.LookAt(lookTarget);
+    }
+
+    void AttackAgent()
+    {
+        if (agentHealth == null || !agentHealth.IsAlive) return;
+
+        agentHealth.TakeDamage(attackDamage);
+        Debug.Log("[TrainingPlayer] Attacked agent!");
+    }
+
+    /// <summary>
+    /// Call this from your episode manager or CombatAgent.OnEpisodeBegin()
+    /// to reset the dummy at the start of each training episode.
+    /// </summary>
+    public void ResetForEpisode()
+    {
+        lastAttackTime = 0f;
+        wanderTarget = startPosition;
+
+        // Re-fetch agent health in case the agent object was re-initialized
+        if (agent != null)
+        {
+            agentHealth = agent.GetComponent<Health>();
+        }
+
+        // Snap back to start position if using Rigidbody
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
+    }
+
     public void SetMode(DummyMode newMode)
     {
         mode = newMode;
-        Debug.Log($"Training dummy mode: {mode}");
+        Debug.Log($"[TrainingPlayer] Mode changed to: {mode}");
     }
 }

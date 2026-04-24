@@ -1,0 +1,56 @@
+{
+    "CombatAI": {
+        "checkpoints": [
+            {
+                "steps": 2304,
+                "file_path": "results\\FifthRun\\CombatAI\\CombatAI-2304.onnx",
+                "reward": null,
+                "creation_time": 1776445317.866422,
+                "auxillary_file_paths": [
+                    "results\\FifthRun\\CombatAI\\CombatAI-2304.pt"
+                ]
+            },
+            {
+                "steps": 15945,
+                "file_path": "results\\FifthRun\\CombatAI\\CombatAI-15945.onnx",
+                "reward": -37.37119456529617,
+                "creation_time": 1776447100.838955,
+                "auxillary_file_paths": [
+                    "results\\FifthRun\\CombatAI\\CombatAI-15945.pt"
+                ]
+            },
+            {
+                "steps": 118560,
+                "file_path": "results\\FifthRun\\CombatAI\\CombatAI-118560.onnx",
+                "reward": null,
+                "creation_time": 1776449164.1048284,
+                "auxillary_file_paths": [
+                    "results\\FifthRun\\CombatAI\\CombatAI-118560.pt"
+                ]
+            },
+            {
+                "steps": 343903,
+                "file_path": "results\\FifthRun\\CombatAI\\CombatAI-343903.onnx",
+                "reward": -2.334930376915992,
+                "creation_time": 1776491420.8902311,
+                "auxillary_file_paths": [
+                    "results\\FifthRun\\CombatAI\\CombatAI-343903.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 343903,
+            "file_path": "results\\FifthRun\\CombatAI.onnx",
+            "reward": -2.334930376915992,
+            "creation_time": 1776491420.8902311,
+            "auxillary_file_paths": [
+                "results\\FifthRun\\CombatAI\\CombatAI-343903.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "2.1.1+cpu"
+    }
+}

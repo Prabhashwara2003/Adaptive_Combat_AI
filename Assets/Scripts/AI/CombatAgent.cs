@@ -18,19 +18,26 @@ public class CombatAgent : Agent
     [SerializeField] private float attackRange = 2.5f;
     [SerializeField] private float attackCooldown = 1f;
 
+    [Header("Visualization")]
+    [SerializeField] private AIVisualization visualization;
+
+    [Header("Visualization")]
+    [SerializeField] private AttackVisualizer attackVisualizer;
+
     private Rigidbody rb;
     private Health health;
     private Health playerHealth;
     private float nextAttackTime = 0f;
     private CapsuleCollider playerCollider;
     private Rigidbody playerRb;
+    private Animator animator;
 
     // Attack stats
     private int attacksLanded = 0;
     private int attacksAttempted = 0;
 
     // Track player movement
-    private Vector3 lastPlayerPosition;
+    private Vector3 lastPlayerLocalPosition;
 
     public override void Initialize()
     {
@@ -40,7 +47,7 @@ public class CombatAgent : Agent
         if (player != null)
         {
             playerHealth = player.GetComponent<Health>();
-            lastPlayerPosition = player.position;
+            lastPlayerLocalPosition = player.localPosition;
         }
     }
 
@@ -50,89 +57,101 @@ public class CombatAgent : Agent
         attacksLanded = 0;
         attacksAttempted = 0;
 
-        // Reset agent position
+        // Reset agent position — slightly tighter range to avoid spawning in walls
         transform.localPosition = new Vector3(
-            Random.Range(-10f, 10f),
+            Random.Range(-8f, 8f),
             1f,
-            Random.Range(-10f, 10f)
+            Random.Range(-8f, 8f)
         );
-        
-        // Reset rotation
         transform.rotation = Quaternion.identity;
 
-        playerCollider = player.GetComponent<CapsuleCollider>();
+        // Cache components
+        playerCollider = player != null ? player.GetComponent<CapsuleCollider>() : null;
+        animator = GetComponent<Animator>();
 
-        if (playerCollider  != null)
-        {
+        if (playerCollider != null)
             playerCollider.enabled = true;
-        }
 
-        playerRb = player.GetComponent<Rigidbody>();
+        playerRb = player != null ? player.GetComponent<Rigidbody>() : null;
         if (playerRb != null)
-        {
             playerRb.isKinematic = false;
-        }
 
-        // Reset health
+        // Reset agent health
         if (health != null)
-        {
             health.ResetHealth();
+
+        if (visualization != null)
+        {
+            visualization.ResetEpisode();
         }
 
         // Reset player
         if (player != null)
         {
             player.localPosition = new Vector3(
-                Random.Range(-10f, 10f),
+                Random.Range(-8f, 8f),
                 0.3f,
-                Random.Range(-10f, 10f)
+                Random.Range(-8f, 8f)
             );
 
             if (playerHealth != null)
-            {
                 playerHealth.ResetHealth();
-            }
 
-            lastPlayerPosition = player.position;
+            lastPlayerLocalPosition = player.localPosition;
         }
         else
         {
-            lastPlayerPosition = Vector3.zero;
+            lastPlayerLocalPosition = Vector3.zero;
         }
+
+        FindObjectOfType<TrainingPlayer>()?.ResetForEpisode();
     }
 
     public override void CollectObservations(VectorSensor sensor)
     {
-        // Agent data
-        sensor.AddObservation(health.CurrentHealth / health.MaxHealth);   // 1
-        sensor.AddObservation(transform.localPosition);                   // 3
+        // Agent health normalized
+        sensor.AddObservation(health != null ? health.CurrentHealth / health.MaxHealth : 0f); // 1
+
+        // Agent local position
+        sensor.AddObservation(transform.localPosition);                                        // 3
 
         if (player != null && playerHealth != null)
         {
-            // Player data
-            sensor.AddObservation(player.localPosition);                  // 3
-            sensor.AddObservation(playerHealth.CurrentHealth / playerHealth.MaxHealth); // 1
+            // Player local position
+            sensor.AddObservation(player.localPosition);                                       // 3
 
-            Vector3 directionToPlayer = player.localPosition - transform.localPosition;
-            sensor.AddObservation(directionToPlayer.normalized);          // 3
+            // Player health normalized
+            sensor.AddObservation(playerHealth.CurrentHealth / playerHealth.MaxHealth);        // 1
 
-            sensor.AddObservation(Vector3.Distance(transform.localPosition, player.localPosition)); // 1
+            // Direction to player normalized
+            Vector3 directionToPlayer = (player.localPosition - transform.localPosition).normalized;
+            sensor.AddObservation(directionToPlayer);                                          // 3
 
-            // New: player movement
-            Vector3 playerMovement = player.position - lastPlayerPosition;
-            sensor.AddObservation(playerMovement);                        // 3
-            lastPlayerPosition = player.position;
+            // Distance to player
+            float distanceToPlayer = Vector3.Distance(transform.localPosition, player.localPosition);
+            sensor.AddObservation(distanceToPlayer);                                           // 1
+
+            // Player movement delta this step
+            Vector3 playerMovement = player.localPosition - lastPlayerLocalPosition;
+            sensor.AddObservation(playerMovement);                                             // 3
+            lastPlayerLocalPosition = player.localPosition;
+
+            // Attack cooldown remaining normalized 0-1
+            float cooldownRemaining = Mathf.Max(0f, nextAttackTime - Time.fixedTime);
+            sensor.AddObservation(cooldownRemaining / attackCooldown);                         // 1
         }
         else
         {
-            sensor.AddObservation(Vector3.zero); // player position        // 3
-            sensor.AddObservation(0f);           // player health          // 1
-            sensor.AddObservation(Vector3.zero); // direction to player    // 3
-            sensor.AddObservation(0f);           // distance               // 1
-            sensor.AddObservation(Vector3.zero); // player movement        // 3
+            sensor.AddObservation(Vector3.zero); // player position    3
+            sensor.AddObservation(0f);           // player health      1
+            sensor.AddObservation(Vector3.zero); // direction          3
+            sensor.AddObservation(0f);           // distance           1
+            sensor.AddObservation(Vector3.zero); // player movement    3
+            sensor.AddObservation(0f);           // cooldown           1
         }
 
-        // Total = 1 + 3 + 3 + 1 + 3 + 1 + 3 = 15
+        // Total = 1 + 3 + 3 + 1 + 3 + 1 + 3 + 1 = 16
+        // *** Set VectorObservationSize = 16 in BehaviorParameters ***
     }
 
     public override void OnActionReceived(ActionBuffers actions)
@@ -140,155 +159,210 @@ public class CombatAgent : Agent
         int moveAction = actions.DiscreteActions[0];
         int attackAction = actions.DiscreteActions[1];
 
-        // MOVEMENT
+        if (visualization != null)
+        {
+            string actionName = GetActionName(moveAction, attackAction);
+            visualization.UpdateAction(actionName);
+        }
+
+        // ---- MOVEMENT ----
         Vector3 moveDirection = Vector3.zero;
         switch (moveAction)
         {
-            case 0:
-                break;
-            case 1:
-                moveDirection = transform.forward;
-                break;
-            case 2:
-                moveDirection = -transform.forward;
-                break;
-            case 3:
-                moveDirection = -transform.right;
-                break;
-            case 4:
-                moveDirection = transform.right;
-                break;
+            case 0: break;
+            case 1: moveDirection = transform.forward; break; // forward
+            case 2: moveDirection = -transform.forward; break; // backward
+            case 3: moveDirection = -transform.right; break; // strafe left
+            case 4: moveDirection = transform.right; break; // strafe right
         }
 
         rb.MovePosition(rb.position + moveDirection * moveSpeed * Time.fixedDeltaTime);
 
-        // ROTATION
+        // ---- ROTATION — always face player ----
         if (player != null)
         {
-            Vector3 lookDirection = (player.position - transform.position).normalized;
+            Vector3 lookDirection = player.position - transform.position;
             lookDirection.y = 0f;
 
-            if (lookDirection.magnitude > 0.1f)
+            if (lookDirection.sqrMagnitude > 0.01f)
             {
-                Quaternion targetRotation = Quaternion.LookRotation(lookDirection);
+                Quaternion targetRotation = Quaternion.LookRotation(lookDirection.normalized);
                 rb.rotation = Quaternion.Slerp(rb.rotation, targetRotation, rotationSpeed * Time.fixedDeltaTime);
             }
         }
 
-        // ATTACK
+        // ---- ATTACK ----
         if (attackAction == 1)
         {
             TryAttack();
         }
 
+        // ----------------------------------------------------------------
+        // REWARDS
+        // Philosophy: reward outcomes only (hits, kills).
+        // Do NOT reward surviving or standing at a distance —
+        // those caused the agent to exploit corners for free reward.
+        // Keep all reward values in a tight -1 to +1 per-step range.
+        // ----------------------------------------------------------------
+
+        // 1. Step cost — small pressure to act decisively
         AddReward(-0.001f);
 
-        // DISTANCE REWARD
         if (player != null)
         {
-            float distanceToPlayer = Vector3.Distance(transform.position, player.position);
-            float optimalDistance = 3f;
-            float distanceFromOptimal = Mathf.Abs(distanceToPlayer - optimalDistance);
+            float dist = Vector3.Distance(transform.position, player.position);
 
-            if (distanceFromOptimal < 1f)
+            // 2. Distance penalty — rubber-band pull toward the player.
+            //    Only active outside attack range so the agent closes in.
+            //    Scales with distance so being very far is penalized more.
+            if (dist > attackRange + 1f)
             {
-                AddReward(0.01f);
+                AddReward(-0.002f * (dist / 10f));
             }
-            else if (distanceToPlayer < 1f)
+
+            // 3. In-range reward — small incentive to stay engaged.
+            //    Kept tiny so it is not worth farming without attacking.
+            if (dist <= attackRange)
             {
-                AddReward(-0.02f);
+                AddReward(0.002f);
             }
-            else if (distanceToPlayer > 10f)
+
+            // 4. Corner/wall penalty — raycast all 4 directions.
+            //    If 2 or more walls are nearby the agent is in a corner.
+            //    -0.005 per step makes cornering unprofitable immediately.
+            int wallCount = 0;
+            float wallCheckDist = 1.5f;
+            if (Physics.Raycast(transform.position, transform.right, wallCheckDist)) wallCount++;
+            if (Physics.Raycast(transform.position, -transform.right, wallCheckDist)) wallCount++;
+            if (Physics.Raycast(transform.position, transform.forward, wallCheckDist)) wallCount++;
+            if (Physics.Raycast(transform.position, -transform.forward, wallCheckDist)) wallCount++;
+
+            if (wallCount >= 2)
             {
-                AddReward(-0.01f);
+                AddReward(-0.005f);
             }
+
+            // NO survival reward — removed entirely.
+            // A per-step survival bonus taught the agent to avoid combat
+            // and farm safe idle ticks instead of engaging.
         }
-
-        // SURVIVAL REWARD
-        if (health != null && health.IsAlive)
-        {
-            AddReward(0.001f);
-        }
-
-        // Time penalty
-        AddReward(-0.0005f);
     }
 
-    void TryAttack()
+    private void TryAttack()
     {
         if (player == null || playerHealth == null) return;
 
-        // Cooldown check
-        if (Time.time < nextAttackTime) return;
+        // Cooldown — use fixedTime to stay consistent with physics loop
+        if (Time.fixedTime < nextAttackTime) return;
 
-        nextAttackTime = Time.time + attackCooldown;
+        nextAttackTime = Time.fixedTime + attackCooldown;
         attacksAttempted++;
 
+        if (animator != null)
+            animator.SetTrigger("Attack");
+
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+        bool hit = false;
 
         if (distanceToPlayer <= attackRange)
         {
             // HIT
             playerHealth.TakeDamage(attackDamage);
             attacksLanded++;
+            hit = true;
 
-            AddReward(1.5f);
-
-            Debug.Log($"Agent hit! Accuracy: {attacksLanded}/{attacksAttempted}");
+            // Reduced from 1.5 to 1.0 to keep scale tight
+            AddReward(1.0f);
+            Debug.Log($"[CombatAgent] Hit! Accuracy: {attacksLanded}/{attacksAttempted}");
 
             if (!playerHealth.IsAlive)
             {
+                // Kill reward capped at 2.5 max to prevent reward magnitude explosion
                 float accuracyBonus = attacksAttempted > 0
                     ? (float)attacksLanded / attacksAttempted
                     : 0f;
 
-                AddReward(5.0f + accuracyBonus * 2f);
+                AddReward(2.0f + accuracyBonus * 0.5f);
+                Debug.Log($"[CombatAgent] Player defeated! Accuracy: {accuracyBonus:F2}");
                 EndEpisode();
             }
         }
         else
         {
-            // MISS
-            AddReward(-0.3f);
-            Debug.Log($"Agent missed! Distance: {distanceToPlayer:F2}");
+            // MISS — reduced from -0.05 to -0.02 so agent still tries to attack
+            AddReward(-0.02f);
+            Debug.Log($"[CombatAgent] Miss! Distance: {distanceToPlayer:F2}");
+        }
+
+        if (attackVisualizer != null)
+        {
+            attackVisualizer.OnAttack(hit);
         }
     }
 
-    public void OnTakeDamage(float damage)
+    /// <summary>
+    /// Called by Health.cs when this agent takes damage.
+    /// lethal = true means this hit brought HP to zero.
+    /// </summary>
+    public void OnTakeDamage(float damage, bool lethal)
     {
-        float penalty = -damage / 10f;
+        // Normalized to max health: 20 damage on 100hp = -0.2 penalty
+        float penalty = -(damage / (health != null ? health.MaxHealth : 100f));
         AddReward(penalty);
+        Debug.Log($"[CombatAgent] Took {damage} damage. Penalty: {penalty:F3}");
 
-        Debug.Log($"Agent took {damage} damage! Penalty: {penalty}");
-
-        if (health != null && !health.IsAlive)
+        if (lethal)
         {
-            AddReward(-10.0f);
+            // Reduced from -10 to -3 to prevent reward scale explosion
+            AddReward(-3f);
+            Debug.Log("[CombatAgent] Agent died. Ending episode.");
             EndEpisode();
         }
     }
 
     public override void Heuristic(in ActionBuffers actionsOut)
     {
-        var discreteActions = actionsOut.DiscreteActions;
+        var discrete = actionsOut.DiscreteActions;
 
-        if (Input.GetKey(KeyCode.W))
-            discreteActions[0] = 1;
-        else if (Input.GetKey(KeyCode.S))
-            discreteActions[0] = 2;
-        else if (Input.GetKey(KeyCode.A))
-            discreteActions[0] = 3;
-        else if (Input.GetKey(KeyCode.D))
-            discreteActions[0] = 4;
-        else
-            discreteActions[0] = 0;
+        if (Input.GetKey(KeyCode.W)) discrete[0] = 1;
+        else if (Input.GetKey(KeyCode.S)) discrete[0] = 2;
+        else if (Input.GetKey(KeyCode.A)) discrete[0] = 3;
+        else if (Input.GetKey(KeyCode.D)) discrete[0] = 4;
+        else discrete[0] = 0;
 
-        discreteActions[1] = Input.GetKey(KeyCode.Space) ? 1 : 0;
+        discrete[1] = Input.GetKey(KeyCode.Space) ? 1 : 0;
     }
 
-    void OnDrawGizmosSelected()
+    private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, attackRange);
+    }
+
+    string GetActionName(int moveAction, int attackAction)
+    {
+        string move = moveAction switch
+        {
+            0 => "Idle",
+            1 => "Forward",
+            2 => "Backward",
+            3 => "Left",
+            4 => "Right",
+            _ => "Unknown"
+        };
+
+        string attack = attackAction == 1 ? " + Attack" : "";
+
+        return move + attack;
+    }
+
+    public new void AddReward(float reward)
+    {
+        base.AddReward(reward);
+
+        if (visualization != null)
+        {
+            visualization.UpdateReward(reward);
+        }
     }
 }

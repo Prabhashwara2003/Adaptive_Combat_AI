@@ -1,0 +1,65 @@
+{
+    "CombatAI": {
+        "checkpoints": [
+            {
+                "steps": 5095,
+                "file_path": "results\\NinthRun\\CombatAI\\CombatAI-5095.onnx",
+                "reward": -2.6818457300012764,
+                "creation_time": 1776829445.9265316,
+                "auxillary_file_paths": [
+                    "results\\NinthRun\\CombatAI\\CombatAI-5095.pt"
+                ]
+            },
+            {
+                "steps": 100767,
+                "file_path": "results\\NinthRun\\CombatAI\\CombatAI-100767.onnx",
+                "reward": 3.699586584017827,
+                "creation_time": 1776830776.3360527,
+                "auxillary_file_paths": [
+                    "results\\NinthRun\\CombatAI\\CombatAI-100767.pt"
+                ]
+            },
+            {
+                "steps": 365051,
+                "file_path": "results\\NinthRun\\CombatAI\\CombatAI-365051.onnx",
+                "reward": 4.4613598448889595,
+                "creation_time": 1776834517.7455094,
+                "auxillary_file_paths": [
+                    "results\\NinthRun\\CombatAI\\CombatAI-365051.pt"
+                ]
+            },
+            {
+                "steps": 499958,
+                "file_path": "results\\NinthRun\\CombatAI\\CombatAI-499958.onnx",
+                "reward": 3.823450207710266,
+                "creation_time": 1776851919.7250586,
+                "auxillary_file_paths": [
+                    "results\\NinthRun\\CombatAI\\CombatAI-499958.pt"
+                ]
+            },
+            {
+                "steps": 501489,
+                "file_path": "results\\NinthRun\\CombatAI\\CombatAI-501489.onnx",
+                "reward": 4.053513898299291,
+                "creation_time": 1776851960.5342703,
+                "auxillary_file_paths": [
+                    "results\\NinthRun\\CombatAI\\CombatAI-501489.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 501489,
+            "file_path": "results\\NinthRun\\CombatAI.onnx",
+            "reward": 4.053513898299291,
+            "creation_time": 1776851960.5342703,
+            "auxillary_file_paths": [
+                "results\\NinthRun\\CombatAI\\CombatAI-501489.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "2.1.1+cpu"
+    }
+}

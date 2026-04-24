@@ -1,0 +1,29 @@
+{
+    "CombatAI": {
+        "checkpoints": [
+            {
+                "steps": 106043,
+                "file_path": "results\\EighthRun\\CombatAI\\CombatAI-106043.onnx",
+                "reward": -143.17678439617157,
+                "creation_time": 1776829196.3893757,
+                "auxillary_file_paths": [
+                    "results\\EighthRun\\CombatAI\\CombatAI-106043.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 106043,
+            "file_path": "results\\EighthRun\\CombatAI.onnx",
+            "reward": -143.17678439617157,
+            "creation_time": 1776829196.3893757,
+            "auxillary_file_paths": [
+                "results\\EighthRun\\CombatAI\\CombatAI-106043.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "2.1.1+cpu"
+    }
+}
